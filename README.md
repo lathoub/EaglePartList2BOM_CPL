@@ -1,1 +1,1 @@
-# EaglePartList2BOM_CPL
+# Eagle PartList to BOM and CPL
