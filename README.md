@@ -1,6 +1,6 @@
 # Eagle PartList to BOM and CPL
-## JCL PCB
-Look up parts for JCL PCB
+## JLC PCB
+Look up parts for JLC PCB
 
 ## Usage
 2 input files:
