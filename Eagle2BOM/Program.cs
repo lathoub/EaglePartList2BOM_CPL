@@ -201,7 +201,7 @@ namespace Eagle2BOM_PCL
             public string Package;
             public string Library;
             public PointF Position;
-            public string Orientation;
+            public int    Orientation;
         };
 
         static float convertToMillimeters = 1.0f;
@@ -268,8 +268,8 @@ namespace Eagle2BOM_PCL
                 part.Library = parts["Library"];
                 part.Position.X = float.Parse(xy[0]) * convertToMillimeters;
                 part.Position.Y = float.Parse(xy[1]) * convertToMillimeters;
-                part.Orientation = parts["Orientation"].Replace('R', '-');
-                part.Orientation = part.Orientation.Replace('L', '+');
+                var rotation = parts["Orientation"].TrimStart('M').Replace('R', '-').Replace('L', '+');
+                part.Orientation = Convert.ToInt16(rotation);
 
                 partList.Add(part);
             }
@@ -380,6 +380,25 @@ namespace Eagle2BOM_PCL
             sw.Close();
 
             //----------------------------------------------------------------------------------------
+            // (Optional) Rotation file
+            var rotDictionary = new Dictionary<string, int>();
+
+            var rotFilename = filePartlist + ".rotation";
+            if (File.Exists(rotFilename))
+            {
+                var rotationList = File.ReadAllLines(rotFilename);
+                // Remove blank lines
+                rotationList = rotationList.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+                rotationList = rotationList.Skip(1).ToArray();
+
+                foreach (var line in rotationList)
+                {
+                    var parts = line.Split(',');
+                    rotDictionary.Add(parts[0], Convert.ToInt32(parts[1]));
+                }
+            }
+
+            //----------------------------------------------------------------------------------------
             // Construct CPL
 
             var cplFilename = filePartlist + "_cpl.csv";
@@ -388,7 +407,15 @@ namespace Eagle2BOM_PCL
             sw.WriteLine("Designator,Mid X,Mid Y,Layer,Rotation");
 
             foreach (var t in PartList)
-                sw.WriteLine($"{t.Part},{t.Position.X}mm,{t.Position.Y}mm,T,{t.Orientation}");
+            {
+                var rotation = t.Orientation;
+
+                // Does this item need additional rotation?
+                if (rotDictionary.TryGetValue(t.Part, out var extraRotation))
+                    rotation -= extraRotation;
+
+                sw.WriteLine($"{t.Part},{t.Position.X}mm,{t.Position.Y}mm,T,{rotation}");
+            }
 
             sw.Close();
 
